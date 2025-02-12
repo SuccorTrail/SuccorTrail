@@ -15,34 +15,35 @@ import (
 )
 
 type Donation struct {
-	ID            string    `json:"id"`
-	Name          string    `json:"name"`
-	Email         string    `json:"email"`
-	Phone         string    `json:"phone"`
-	MealType      string    `json:"mealType"`
-	Quantity      int       `json:"quantity"`
-	ExpiryDate    time.Time `json:"expiryDate"`
-	Location      string    `json:"location"`
-	Notes         string    `json:"notes"`
-	CreatedAt     time.Time `json:"createdAt"`
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	Email      string    `json:"email"`
+	Phone      string    `json:"phone"`
+	MealType   string    `json:"mealType"`
+	Quantity   int       `json:"quantity"`
+	ExpiryDate time.Time `json:"expiryDate"`
+	Location   string    `json:"location"`
+	Notes      string    `json:"notes"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
 type Receiver struct {
-	ID                 string   `json:"id"`
-	Name               string   `json:"name"`
-	Phone              string   `json:"phone"`
-	Location           string   `json:"location"`
-	FamilySize         int      `json:"familySize"`
-	DietaryRestrictions []string `json:"dietaryRestrictions"`
-	CreatedAt          time.Time `json:"createdAt"`
+	ID                  string    `json:"id"`
+	Name                string    `json:"name"`
+	Phone               string    `json:"phone"`
+	Location            string    `json:"location"`
+	FamilySize          int       `json:"familySize"`
+	DietaryRestrictions []string  `json:"dietaryRestrictions"`
+	CreatedAt           time.Time `json:"createdAt"`
 }
 
 type Feedback struct {
-	ID        string    `json:"id"`
+	ID         string    `json:"id"`
 	DonationID string    `json:"donationId"`
-	Quality   int       `json:"quality"`
-	Comments  string    `json:"comments"`
-	CreatedAt time.Time `json:"createdAt"`
+	Quality    int       `json:"quality"`
+	Comments   string    `json:"comments"`
+	CreatedAt  time.Time `json:"createdAt"`
 }
 
 var db *sql.DB
@@ -102,7 +103,8 @@ func initDB() (*sql.DB, error) {
 		expiry_date DATETIME,
 		location TEXT,
 		notes TEXT,
-		created_at DATETIME
+		created_at DATETIME,
+		updated_at DATETIME
 	);
 	CREATE TABLE IF NOT EXISTS receivers (
 		id TEXT PRIMARY KEY,
@@ -135,56 +137,118 @@ func serveTemplate(tmpl string) http.HandlerFunc {
 func createDonation(w http.ResponseWriter, r *http.Request) {
 	var donation Donation
 	if err := json.NewDecoder(r.Body).Decode(&donation); err != nil {
+		log.Printf("Error decoding donation: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	// Validate required fields
+	if donation.Name == "" || donation.Email == "" || donation.Phone == "" || 
+	   donation.MealType == "" || donation.Quantity <= 0 || donation.Location == "" {
+		http.Error(w, "All fields are required and quantity must be positive", http.StatusBadRequest)
+		return
+	}
+
+	now := time.Now()
 	donation.ID = uuid.New().String()
-	donation.CreatedAt = time.Now()
+	donation.CreatedAt = now
+	donation.UpdatedAt = now
 
 	_, err := db.Exec(`
-		INSERT INTO donations (id, name, email, phone, meal_type, quantity, expiry_date, location, notes, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO donations (id, name, email, phone, meal_type, quantity, expiry_date, location, notes, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		donation.ID, donation.Name, donation.Email, donation.Phone, donation.MealType,
-		donation.Quantity, donation.ExpiryDate, donation.Location, donation.Notes, donation.CreatedAt)
+		donation.Quantity, donation.ExpiryDate, donation.Location, donation.Notes, donation.CreatedAt, donation.UpdatedAt)
 
 	if err != nil {
+		log.Printf("Error inserting donation: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"donationId": donation.ID})
 }
 
 func createReceiver(w http.ResponseWriter, r *http.Request) {
 	var receiver Receiver
 	if err := json.NewDecoder(r.Body).Decode(&receiver); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("Error decoding receiver data: %v", err)
+		http.Error(w, "Invalid request data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	log.Printf("Received registration request: %+v", receiver)
+
+	// Validate required fields
+	if receiver.Name == "" || receiver.Phone == "" || receiver.Location == "" || receiver.FamilySize <= 0 {
+		log.Println("Missing required fields or invalid family size")
+		http.Error(w, "Name, phone, location are required and family size must be positive", http.StatusBadRequest)
+		return
+	}
+
+	now := time.Now()
 	receiver.ID = uuid.New().String()
-	receiver.CreatedAt = time.Now()
+	receiver.CreatedAt = now
 
-	restrictionsJSON, _ := json.Marshal(receiver.DietaryRestrictions)
+	// Convert dietary restrictions to JSON string
+	var restrictionsJSON []byte
+	var err error
+	if len(receiver.DietaryRestrictions) > 0 {
+		restrictionsJSON, err = json.Marshal(receiver.DietaryRestrictions)
+		if err != nil {
+			log.Printf("Error marshaling dietary restrictions: %v", err)
+			http.Error(w, "Invalid dietary restrictions format", http.StatusBadRequest)
+			return
+		}
+	} else {
+		restrictionsJSON = []byte("[]") // Empty array for no restrictions
+	}
 
-	_, err := db.Exec(`
+	log.Printf("Inserting receiver with ID: %s", receiver.ID)
+
+	// Insert into database
+	_, err = db.Exec(`
 		INSERT INTO receivers (id, name, phone, location, family_size, dietary_restrictions, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		receiver.ID, receiver.Name, receiver.Phone, receiver.Location,
 		receiver.FamilySize, string(restrictionsJSON), receiver.CreatedAt)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Database error inserting receiver: %v", err)
+		http.Error(w, "Failed to register receiver", http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{"receiverId": receiver.ID})
+	log.Printf("Successfully registered receiver with ID: %s", receiver.ID)
+
+	// Set response headers
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	// Return success response
+	response := map[string]string{
+		"receiverId": receiver.ID,
+		"message": "Registration successful",
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response: %v", err)
+		http.Error(w, "Error generating response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func getAvailableMeals(w http.ResponseWriter, r *http.Request) {
 	location := r.URL.Query().Get("location")
+	if location == "" {
+		log.Println("Location parameter is missing")
+		http.Error(w, "Location parameter is required", http.StatusBadRequest)
+		return
+	}
 
+	log.Printf("Fetching meals for location: %s", location)
+
+	// Query active donations in the specified location that haven't expired
 	rows, err := db.Query(`
 		SELECT id, meal_type, quantity, expiry_date, location
 		FROM donations
@@ -193,34 +257,48 @@ func getAvailableMeals(w http.ResponseWriter, r *http.Request) {
 		"%"+location+"%")
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Database query error: %v", err)
+		http.Error(w, "Failed to fetch meals from database", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
 
-	var meals []map[string]interface{}
-	for rows.Next() {
-		var meal struct {
-			ID         string
-			MealType   string
-			Quantity   int
-			ExpiryDate time.Time
-			Location   string
-		}
-		if err := rows.Scan(&meal.ID, &meal.MealType, &meal.Quantity, &meal.ExpiryDate, &meal.Location); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		meals = append(meals, map[string]interface{}{
-			"id":         meal.ID,
-			"type":       meal.MealType,
-			"quantity":   meal.Quantity,
-			"expiryDate": meal.ExpiryDate,
-			"location":   meal.Location,
-		})
+	type MealInfo struct {
+		ID         string    `json:"id"`
+		Type       string    `json:"type"`
+		Quantity   int       `json:"quantity"`
+		ExpiryDate time.Time `json:"expiryDate"`
+		Location   string    `json:"location"`
 	}
 
-	json.NewEncoder(w).Encode(meals)
+	var meals []MealInfo
+	for rows.Next() {
+		var meal MealInfo
+		err := rows.Scan(&meal.ID, &meal.Type, &meal.Quantity, &meal.ExpiryDate, &meal.Location)
+		if err != nil {
+			log.Printf("Error scanning meal row: %v", err)
+			continue
+		}
+		meals = append(meals, meal)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating over rows: %v", err)
+		http.Error(w, "Error reading meals data", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Found %d meals for location: %s", len(meals), location)
+
+	// Set response headers
+	w.Header().Set("Content-Type", "application/json")
+
+	// Encode the response
+	if err := json.NewEncoder(w).Encode(meals); err != nil {
+		log.Printf("Error encoding meals response: %v", err)
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func verifyMeal(w http.ResponseWriter, r *http.Request) {

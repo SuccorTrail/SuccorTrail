@@ -8,9 +8,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
     receiverForm.addEventListener('submit', async function(e) {
         e.preventDefault();
+        console.log('Form submission started');
 
         const formData = new FormData(receiverForm);
-        const data = Object.fromEntries(formData.entries());
+        const dietarySelect = document.getElementById('dietaryRestrictions');
+        const selectedDietary = Array.from(dietarySelect.selectedOptions).map(option => option.value);
+
+        const data = {
+            name: formData.get('name'),
+            phone: formData.get('phone'),
+            location: formData.get('location'),
+            familySize: parseInt(formData.get('familySize'), 10),
+            dietaryRestrictions: selectedDietary
+        };
+
+        // Validate the data
+        if (!data.name || !data.phone || !data.location || !data.familySize || data.familySize <= 0) {
+            showNotification('Please fill in all required fields and ensure family size is positive', 'error');
+            return;
+        }
+
+        console.log('Sending registration data:', data);
 
         try {
             const response = await fetch('/api/receivers', {
@@ -21,46 +39,90 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify(data)
             });
 
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+            const responseText = await response.text();
+            console.log('Raw server response:', responseText);
+
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Error parsing server response:', parseError);
+                throw new Error('Invalid server response');
             }
 
-            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.message || 'Registration failed');
+            }
+
+            console.log('Registration successful:', result);
             
-            // Show available meals
-            await fetchAvailableMeals(data.location);
+            // Clear form
+            receiverForm.reset();
             
             // Show success message
-            showNotification('Registration successful! You will be notified when meals are available.', 'success');
+            showNotification(result.message || 'Registration successful! You will be notified when meals are available.', 'success');
+            
+            // Fetch available meals
+            await fetchAvailableMeals(data.location);
 
         } catch (error) {
-            console.error('Error:', error);
-            showNotification('Failed to register. Please try again.', 'error');
+            console.error('Registration error:', error);
+            showNotification(error.message || 'Failed to register. Please try again.', 'error');
         }
     });
 
     async function fetchAvailableMeals(location) {
         try {
+            console.log('Fetching meals for location:', location);
             const response = await fetch(`/api/meals?location=${encodeURIComponent(location)}`);
-            const meals = await response.json();
-
-            if (meals.length > 0) {
-                mealsList.innerHTML = '';
-                meals.forEach(meal => {
-                    const mealCard = document.createElement('div');
-                    mealCard.className = 'card';
-                    mealCard.innerHTML = `
-                        <h3>${meal.type}</h3>
-                        <p>Available: ${meal.quantity}</p>
-                        <p>Pickup Location: ${meal.location}</p>
-                        <p>Expires: ${new Date(meal.expiryDate).toLocaleString()}</p>
-                    `;
-                    mealsList.appendChild(mealCard);
-                });
-                availableMeals.style.display = 'block';
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Server error:', errorText);
+                throw new Error('Failed to fetch meals');
             }
+
+            const meals = await response.json();
+            console.log('Received meals:', meals);
+
+            mealsList.innerHTML = '';
+            availableMeals.style.display = 'block';
+
+            if (!Array.isArray(meals)) {
+                throw new Error('Server returned unexpected data format');
+            }
+
+            if (meals.length === 0) {
+                mealsList.innerHTML = `
+                    <div class="info-message">
+                        <p>No meals are currently available in ${location}.</p>
+                        <p>Please check back later or try a different location.</p>
+                    </div>`;
+                return;
+            }
+
+            const mealsHtml = meals.map(meal => {
+                const expiryDate = new Date(meal.expiryDate);
+                return `
+                    <div class="card meal-card">
+                        <h3>${meal.type}</h3>
+                        <p><strong>Available:</strong> ${meal.quantity} servings</p>
+                        <p><strong>Location:</strong> ${meal.location}</p>
+                        <p><strong>Expires:</strong> ${expiryDate.toLocaleString()}</p>
+                    </div>`;
+            }).join('');
+
+            mealsList.innerHTML = mealsHtml;
+
         } catch (error) {
             console.error('Error fetching meals:', error);
+            mealsList.innerHTML = `
+                <div class="error-message">
+                    <p>Unable to load meals at this time.</p>
+                    <p>Error: ${error.message}</p>
+                    <p>Please try again later.</p>
+                </div>`;
+            availableMeals.style.display = 'block';
         }
     }
 
@@ -143,10 +205,14 @@ document.addEventListener('DOMContentLoaded', function() {
         notification.className = `notification notification-${type}`;
         notification.textContent = message;
         
+        // Remove any existing notifications
+        const existingNotifications = document.querySelectorAll('.notification');
+        existingNotifications.forEach(n => n.remove());
+        
         document.body.appendChild(notification);
         
         setTimeout(() => {
             notification.remove();
-        }, 3000);
+        }, 5000);
     }
 });

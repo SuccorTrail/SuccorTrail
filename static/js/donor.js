@@ -14,7 +14,16 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
 
         const formData = new FormData(donorForm);
-        const data = Object.fromEntries(formData.entries());
+        const data = {
+            name: formData.get('name'),
+            email: formData.get('email'),
+            phone: formData.get('phone'),
+            mealType: formData.get('mealType'),
+            quantity: parseInt(formData.get('quantity'), 10),
+            expiryDate: new Date(formData.get('expiryDate')).toISOString(),
+            location: formData.get('location'),
+            notes: formData.get('notes') || ''
+        };
 
         try {
             const response = await fetch('/api/donations', {
@@ -26,14 +35,19 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                const errorText = await response.text();
+                throw new Error(errorText);
             }
 
             const result = await response.json();
             
+            // Clear previous QR code if exists
+            const qrCodeDiv = document.getElementById('qrCode');
+            qrCodeDiv.innerHTML = '';
+            
             // Generate QR Code
             qrContainer.style.display = 'block';
-            const qrCode = new QRCode(document.getElementById('qrCode'), {
+            new QRCode(qrCodeDiv, {
                 text: result.donationId,
                 width: 200,
                 height: 200
@@ -47,12 +61,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } catch (error) {
             console.error('Error:', error);
-            showNotification('Failed to register donation. Please try again.', 'error');
+            showNotification(error.message || 'Failed to register donation. Please try again.', 'error');
         }
     });
 
     printQRButton.addEventListener('click', function() {
         const qrCodeImg = document.getElementById('qrCode').querySelector('img');
+        if (!qrCodeImg) {
+            showNotification('No QR code to print', 'error');
+            return;
+        }
+        
         const printWindow = window.open('', '', 'width=600,height=600');
         printWindow.document.open();
         printWindow.document.write('<html><head><title>Print QR Code</title></head><body>');
