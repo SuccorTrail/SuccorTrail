@@ -14,19 +14,9 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
 
         const formData = new FormData(donorForm);
-        const data = {
-            name: formData.get('name'),
-            email: formData.get('email'),
-            phone: formData.get('phone'),
-            mealType: formData.get('mealType'),
-            quantity: parseInt(formData.get('quantity'), 10),
-            expiryDate: new Date(formData.get('expiryDate')).toISOString(),
-            location: formData.get('location'),
-            notes: formData.get('notes') || ''
-        };
+        const data = Object.fromEntries(formData.entries());
 
         try {
-            console.log('Sending donation data:', data);
             const response = await fetch('/api/donations', {
                 method: 'POST',
                 headers: {
@@ -36,12 +26,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Server error: ${errorText}`);
+                throw new Error('Network response was not ok');
             }
 
             const result = await response.json();
-            console.log('Server response:', result);
             
             // Generate QR Code
             qrContainer.style.display = 'block';
