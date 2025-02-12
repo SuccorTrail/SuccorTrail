@@ -3,15 +3,13 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"log"
-	"net/http"
-	"os"
-	"path/filepath"
-	"time"
-
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"log"
+	"net/http"
+	"text/template"
+	"time"
 )
 
 type Donation struct {
@@ -51,18 +49,25 @@ var db *sql.DB
 func main() {
 	// Initialize database
 	var err error
-	db, err = initDB()
+	db, err = sql.Open("sqlite3", "succor.db")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
+	initDB()
+
 	// Initialize router
 	r := mux.NewRouter()
 
 	// Serve static files
-	fs := http.FileServer(http.Dir("static"))
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
+	// HTML routes
+	r.HandleFunc("/", serveTemplate("templates/index.html"))
+	r.HandleFunc("/donor", serveTemplate("templates/donor.html"))
+	r.HandleFunc("/receiver", serveTemplate("templates/receiver.html"))
+	r.HandleFunc("/meal-finder", serveTemplate("templates/meal-finder.html"))
 
 	// API routes
 	r.HandleFunc("/api/donations", createDonation).Methods("POST")
@@ -71,26 +76,11 @@ func main() {
 	r.HandleFunc("/api/verify-meal", verifyMeal).Methods("POST")
 	r.HandleFunc("/api/feedback", submitFeedback).Methods("POST")
 
-	// HTML routes
-	r.HandleFunc("/", serveTemplate("index.html"))
-	r.HandleFunc("/donor", serveTemplate("donor.html"))
-	r.HandleFunc("/receiver", serveTemplate("receiver.html"))
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("Server starting on port %s...\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, r))
+	log.Println("Server starting on :8080")
+	log.Fatal(http.ListenAndServe(":8080", r))
 }
 
-func initDB() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "succortrail.db")
-	if err != nil {
-		return nil, err
-	}
-
+func initDB() {
 	// Create tables
 	sqlStmt := `
 	CREATE TABLE IF NOT EXISTS donations (
@@ -124,13 +114,26 @@ func initDB() (*sql.DB, error) {
 		FOREIGN KEY(donation_id) REFERENCES donations(id)
 	);`
 
-	_, err = db.Exec(sqlStmt)
-	return db, err
+	_, err := db.Exec(sqlStmt)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
-func serveTemplate(tmpl string) http.HandlerFunc {
+func serveTemplate(templatePath string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("templates", tmpl))
+		tmpl, err := template.ParseFiles(templatePath)
+		if err != nil {
+			log.Printf("Error parsing template %s: %v", templatePath, err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		err = tmpl.Execute(w, nil)
+		if err != nil {
+			log.Printf("Error executing template %s: %v", templatePath, err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
@@ -248,7 +251,15 @@ func getAvailableMeals(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Fetching meals for location: %s", location)
 
-	// Query active donations in the specified location that haven't expired
+	// Initialize an empty slice to ensure we always return an array
+	meals := make([]struct {
+		ID         string    `json:"id"`
+		Type       string    `json:"type"`
+		Quantity   int       `json:"quantity"`
+		ExpiryDate time.Time `json:"expiryDate"`
+		Location   string    `json:"location"`
+	}, 0)
+
 	rows, err := db.Query(`
 		SELECT id, meal_type, quantity, expiry_date, location
 		FROM donations
@@ -258,45 +269,71 @@ func getAvailableMeals(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Printf("Database query error: %v", err)
-		http.Error(w, "Failed to fetch meals from database", http.StatusInternalServerError)
+		// Even on error, return an empty array
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(meals)
 		return
 	}
 	defer rows.Close()
 
-	type MealInfo struct {
-		ID         string    `json:"id"`
-		Type       string    `json:"type"`
-		Quantity   int       `json:"quantity"`
-		ExpiryDate time.Time `json:"expiryDate"`
-		Location   string    `json:"location"`
-	}
-
-	var meals []MealInfo
 	for rows.Next() {
-		var meal MealInfo
-		err := rows.Scan(&meal.ID, &meal.Type, &meal.Quantity, &meal.ExpiryDate, &meal.Location)
-		if err != nil {
+		var meal struct {
+			ID         string
+			MealType   string
+			Quantity   int
+			ExpiryDate time.Time
+			Location   string
+		}
+
+		if err := rows.Scan(&meal.ID, &meal.MealType, &meal.Quantity, &meal.ExpiryDate, &meal.Location); err != nil {
 			log.Printf("Error scanning meal row: %v", err)
 			continue
 		}
-		meals = append(meals, meal)
+
+		log.Printf("Scanned meal: ID=%s, Type=%s, Quantity=%d, ExpiryDate=%v, Location=%s",
+			meal.ID, meal.MealType, meal.Quantity, meal.ExpiryDate, meal.Location)
+
+		meals = append(meals, struct {
+			ID         string    `json:"id"`
+			Type       string    `json:"type"`
+			Quantity   int       `json:"quantity"`
+			ExpiryDate time.Time `json:"expiryDate"`
+			Location   string    `json:"location"`
+		}{
+			ID:         meal.ID,
+			Type:       meal.MealType,
+			Quantity:   meal.Quantity,
+			ExpiryDate: meal.ExpiryDate,
+			Location:   meal.Location,
+		})
 	}
 
 	if err = rows.Err(); err != nil {
 		log.Printf("Error iterating over rows: %v", err)
-		http.Error(w, "Error reading meals data", http.StatusInternalServerError)
+		// Even on error, return an empty array
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(meals)
 		return
 	}
 
 	log.Printf("Found %d meals for location: %s", len(meals), location)
 
-	// Set response headers
-	w.Header().Set("Content-Type", "application/json")
+	// Log the response before sending
+	responseBytes, err := json.MarshalIndent(meals, "", "  ")
+	if err != nil {
+		log.Printf("Error marshaling response: %v", err)
+		// Even on error, return an empty array
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(make([]struct{}, 0))
+		return
+	}
+	log.Printf("Response JSON:\n%s", string(responseBytes))
 
-	// Encode the response
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(meals); err != nil {
 		log.Printf("Error encoding meals response: %v", err)
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		// Even on error, return an empty array
+		json.NewEncoder(w).Encode(make([]struct{}, 0))
 		return
 	}
 }
