@@ -25,6 +25,7 @@ type Donation struct {
 	Location   string    `json:"location"`
 	Notes      string    `json:"notes"`
 	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
 type Receiver struct {
@@ -102,7 +103,8 @@ func initDB() (*sql.DB, error) {
 		expiry_date DATETIME,
 		location TEXT,
 		notes TEXT,
-		created_at DATETIME
+		created_at DATETIME,
+		updated_at DATETIME
 	);
 	CREATE TABLE IF NOT EXISTS receivers (
 		id TEXT PRIMARY KEY,
@@ -135,24 +137,36 @@ func serveTemplate(tmpl string) http.HandlerFunc {
 func createDonation(w http.ResponseWriter, r *http.Request) {
 	var donation Donation
 	if err := json.NewDecoder(r.Body).Decode(&donation); err != nil {
+		log.Printf("Error decoding donation: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	// Validate required fields
+	if donation.Name == "" || donation.Email == "" || donation.Phone == "" || 
+	   donation.MealType == "" || donation.Quantity <= 0 || donation.Location == "" {
+		http.Error(w, "All fields are required and quantity must be positive", http.StatusBadRequest)
+		return
+	}
+
+	now := time.Now()
 	donation.ID = uuid.New().String()
-	donation.CreatedAt = time.Now()
+	donation.CreatedAt = now
+	donation.UpdatedAt = now
 
 	_, err := db.Exec(`
-		INSERT INTO donations (id, name, email, phone, meal_type, quantity, expiry_date, location, notes, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO donations (id, name, email, phone, meal_type, quantity, expiry_date, location, notes, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		donation.ID, donation.Name, donation.Email, donation.Phone, donation.MealType,
-		donation.Quantity, donation.ExpiryDate, donation.Location, donation.Notes, donation.CreatedAt)
+		donation.Quantity, donation.ExpiryDate, donation.Location, donation.Notes, donation.CreatedAt, donation.UpdatedAt)
 
 	if err != nil {
+		log.Printf("Error inserting donation: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"donationId": donation.ID})
 }
 
