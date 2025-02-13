@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SuccorTrail - Food Aid Distribution Platform</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/styles.css" />
+    <style>
+      .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin: 3rem 0;
+      }
+
+      .feature-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+
+      .feature-card h3 {
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+      }
+
+      .cta-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin: 2rem 0;
+      }
+
+      .hero {
+        background: linear-gradient(
+          rgba(46, 204, 113, 0.1),
+          rgba(52, 152, 219, 0.1)
+        );
+        padding: 4rem 0;
+        text-align: center;
+      }
+
+      .hero h1 {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: var(--text-color);
+      }
+
+      .hero p {
+        font-size: 1.2rem;
+        color: var(--text-color);
+        max-width: 600px;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="navbar-container">
+        <a href="/" class="logo">SuccorTrail</a>
+        <div>
+          <a href="/donor" class="btn btn-primary">Donate Meals</a>
+          <a href="/receiver" class="btn btn-secondary">Receive Meals</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <div class="hero">
+        <h1>SuccorTrail</h1>
+        <p>Revolutionizing food aid distribution with blockchain technology</p>
+
+        <div class="cta-buttons">
+          <a href="/donor" class="btn btn-primary">Donate Meals</a>
+          <a href="/receiver" class="btn btn-secondary">Receive Meals</a>
+        </div>
+      </div>
+
+      <div class="features">
+        <div class="feature-card">
+          <h3>QR-Coded Meal Packages</h3>
+          <p>
+            Every meal package is tracked with a unique QR code from donor to
+            recipient
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <h3>Blockchain Tracking</h3>
+          <p>
+            Transparent and secure tracking of food aid distribution using
+            blockchain technology
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <h3>AI-Powered Matching</h3>
+          <p>
+            Smart matching of food resources with local needs to reduce waste
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <h3>Real-Time Updates</h3>
+          <p>
+            Recipients receive instant notifications when meals are available in
+            their area
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <h3>Quality Verification</h3>
+          <p>Recipients can verify and provide feedback on meal quality</p>
+        </div>
+
+        <div class="feature-card">
+          <h3>Impact Tracking</h3>
+          <p>Track the impact of your donations in real-time</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

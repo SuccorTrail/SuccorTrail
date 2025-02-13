@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SuccorTrail - Receive Meals</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/styles.css" />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="navbar-container">
+        <a href="/" class="logo">SuccorTrail</a>
+        <div>
+          <a href="/donor" class="btn btn-primary">Donate Meals</a>
+          <a href="/receiver" class="btn btn-secondary">Receive Meals</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <div class="hero">
+        <h1>Receive Meals</h1>
+        <p>Access nutritious meals in your area</p>
+      </div>
+
+      <div class="form-container">
+        <form id="receiverForm">
+          <div class="form-group">
+            <label for="name">Full Name</label>
+            <input type="text" id="name" name="name" required />
+          </div>
+
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" required />
+          </div>
+
+          <div class="form-group">
+            <label for="location">Your Location</label>
+            <input type="text" id="location" name="location" required />
+          </div>
+
+          <div class="form-group">
+            <label for="familySize">Family Size</label>
+            <input
+              type="number"
+              id="familySize"
+              name="familySize"
+              min="1"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="dietaryRestrictions">Dietary Restrictions</label>
+            <select
+              id="dietaryRestrictions"
+              name="dietaryRestrictions"
+              multiple
+            >
+              <option value="vegetarian">Vegetarian</option>
+              <option value="vegan">Vegan</option>
+              <option value="halal">Halal</option>
+              <option value="kosher">Kosher</option>
+              <option value="glutenFree">Gluten Free</option>
+              <option value="nutFree">Nut Free</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            Register for Meals
+          </button>
+        </form>
+      </div>
+
+      <div id="availableMeals" class="card" style="display: none">
+        <h2 class="card-title">Available Meals Near You</h2>
+        <div id="mealsList"></div>
+      </div>
+
+      <div class="qr-container">
+        <h2>Scan QR Code</h2>
+        <p>
+          Use your phone's camera to scan the QR code on your meal package to
+          verify receipt
+        </p>
+        <button id="scanQR" class="btn btn-secondary">Open QR Scanner</button>
+      </div>
+
+      <div id="feedbackForm" class="form-container" style="display: none">
+        <h2>Meal Feedback</h2>
+        <form id="mealFeedback">
+          <div class="form-group">
+            <label for="quality">Meal Quality</label>
+            <select id="quality" name="quality" required>
+              <option value="5">Excellent</option>
+              <option value="4">Good</option>
+              <option value="3">Average</option>
+              <option value="2">Poor</option>
+              <option value="1">Very Poor</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="comments">Comments</label>
+            <textarea id="comments" name="comments" rows="3"></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Submit Feedback</button>
+        </form>
+      </div>
+    </div>
+
+    <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+    <script src="/static/js/receiver.js"></script>
+  </body>
+</html>
