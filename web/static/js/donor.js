@@ -3,12 +3,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const qrContainer = document.getElementById('qrContainer');
     const printQRButton = document.getElementById('printQR');
 
-    // Set minimum date for expiry date input to current date/time
+    // Set minimum date for expiry date input to current date
     const expiryDateInput = document.getElementById('expiryDate');
-    const now = new Date();
-    const tzoffset = now.getTimezoneOffset() * 60000;
-    const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 16);
-    expiryDateInput.min = localISOTime;
+    const today = new Date().toISOString().split('T')[0];
+    expiryDateInput.min = today;
 
     donorForm.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -40,18 +38,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const result = await response.json();
+            console.log('API Response:', result);
             
             // Clear previous QR code if exists
             const qrCodeDiv = document.getElementById('qrCode');
+            if (!qrCodeDiv) {
+                console.error('QR code div not found');
+                return;
+            }
             qrCodeDiv.innerHTML = '';
             
             // Generate QR Code
             qrContainer.style.display = 'block';
+            console.log('Generating QR code for donation ID:', result.donationId);
             new QRCode(qrCodeDiv, {
-                text: result.donationId,
+                text: result.donationId || 'test',
                 width: 200,
                 height: 200
             });
+            console.log('QR code generated');
 
             // Clear form
             donorForm.reset();
