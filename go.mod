@@ -4,6 +4,7 @@ go 1.23.4
 
 require (
 	github.com/ethereum/go-ethereum v1.15.1
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/sirupsen/logrus v1.9.3
@@ -36,7 +37,4 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-require (
-	github.com/google/uuid v1.6.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-)
+require golang.org/x/sys v0.29.0 // indirect
