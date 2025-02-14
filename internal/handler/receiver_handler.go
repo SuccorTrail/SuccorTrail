@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/SuccorTrail/SuccorTrail/internal/model"
 	"github.com/SuccorTrail/SuccorTrail/internal/repository"
@@ -28,14 +29,25 @@ func (h *ReceiverHandler) CreateReceiver(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Generate a unique ID for the receiver
+	receiver.ID = util.GenerateUUID()
+	receiver.CreatedAt = time.Now()
+
 	if err := h.Repo.Create(&receiver); err != nil {
 		logrus.WithError(err).Error("Error creating receiver")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Prepare response with receiver ID
+	response := map[string]string{
+		"receiverId": receiver.ID,
+		"message":    "Receiver registered successfully",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(receiver)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *ReceiverHandler) RenderReceiverForm(w http.ResponseWriter, r *http.Request) {
