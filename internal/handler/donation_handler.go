@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/SuccorTrail/SuccorTrail/internal/model"
 	"github.com/SuccorTrail/SuccorTrail/internal/repository"
@@ -28,6 +29,14 @@ func (h *DonationHandler) CreateDonation(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
+
+	// Generate unique ID for the donation
+	donation.ID = util.GenerateUUID()
+
+	// Set timestamps
+	now := time.Now()
+	donation.CreatedAt = now
+	donation.UpdatedAt = now
 
 	if err := h.Repo.Create(&donation); err != nil {
 		logrus.WithError(err).Error("Error creating donation")

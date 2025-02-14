@@ -56,14 +56,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log('Registration successful:', result);
             
-            // Clear form
-            receiverForm.reset();
+            // Store receiver data in localStorage
+            data.id = result.receiverId;
+            localStorage.setItem('receiverData', JSON.stringify(data));
             
-            // Show success message
-            showNotification(result.message || 'Registration successful! You will be notified when meals are available.', 'success');
+            // Show success message and redirect
+            showNotification('Registration successful! Redirecting to meal finder...', 'success');
             
-            // Fetch available meals
-            await fetchAvailableMeals(data.location);
+            // Redirect to meal finder after a short delay
+            setTimeout(() => {
+                window.location.href = '/meal-finder';
+            }, 1500);
 
         } catch (error) {
             console.error('Registration error:', error);

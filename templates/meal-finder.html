@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meal Finder - SuccorTrail</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SuccorTrail Meal Finder</h1>
+            <p class="welcome-message">Welcome, <span id="receiverName"></span></p>
+        </header>
+
+        <main>
+            <section class="meal-finder-section">
+                <h2>Available Meals Near You</h2>
+                <div class="location-info">
+                    <p>Your Location: <span id="receiverLocation"></span></p>
+                    <button id="changeLocation" class="btn">Change Location</button>
+                </div>
+                <div id="mealsList" class="meals-grid"></div>
+            </section>
+
+            <section class="profile-section">
+                <h2>Your Profile</h2>
+                <div class="profile-info">
+                    <p><strong>Phone:</strong> <span id="receiverPhone"></span></p>
+                    <p><strong>Family Size:</strong> <span id="familySize"></span></p>
+                    <p><strong>Dietary Restrictions:</strong> <span id="dietaryRestrictions"></span></p>
+                </div>
+            </section>
+
+            <section class="meal-history-section">
+                <h2>Your Meal History</h2>
+                <div id="mealHistory" class="meal-history">
+                    <!-- Meal history will be populated here -->
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Need help? Contact support at support@succortrail.com</p>
+        </footer>
+    </div>
+    <script src="/static/js/meal-finder.js"></script>
+</body>
+</html>
