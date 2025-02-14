@@ -15,30 +15,45 @@ document.addEventListener('DOMContentLoaded', function() {
             ? receiverData.dietaryRestrictions.join(', ') 
             : 'None';
 
+    // Enhance location description based on location
+    function getLocationDescription(location) {
+        const locationDescriptions = {
+            'urban': 'Urban areas often have diverse meal options and multiple distribution points.',
+            'suburban': 'Suburban locations may have community centers and local food banks.',
+            'rural': 'Rural areas might have fewer but more personalized meal distribution services.',
+            'default': 'Your location helps us connect you with nearby meal resources.'
+        };
+
+        // Basic location type detection (very simple, can be expanded)
+        const locationLower = location.toLowerCase();
+        if (locationLower.includes('city') || locationLower.includes('urban')) return locationDescriptions['urban'];
+        if (locationLower.includes('suburb')) return locationDescriptions['suburban'];
+        if (locationLower.includes('rural') || locationLower.includes('country')) return locationDescriptions['rural'];
+        return locationDescriptions['default'];
+    }
+
+    document.getElementById('locationDescription').textContent = 
+        getLocationDescription(receiverData.location);
+
     // Fetch available meals
     async function fetchAvailableMeals(location) {
         const mealsList = document.getElementById('mealsList');
         
         try {
-            console.log('Fetching meals for location:', location);
             const response = await fetch(`/api/meals?location=${encodeURIComponent(location)}`);
             
-            console.log('Response status:', response.status);
-            console.log('Response headers:', Object.fromEntries([...response.headers]));
-            
-            const responseText = await response.text();
-            console.log('Raw response text:', responseText);
-
             if (!response.ok) {
-                throw new Error(`Server error: ${response.status} - ${responseText}`);
+                throw new Error(`Server error: ${response.status}`);
             }
 
+            const responseText = await response.text();
+
             if (!responseText.trim()) {
-                console.log('Empty response, treating as empty array');
                 mealsList.innerHTML = `
                     <div class="info-message">
+                        <i class="fas fa-info-circle"></i>
                         <p>No meals are currently available in ${location}.</p>
-                        <p>Please check back later or try a different location.</p>
+                        <p>Our team is working to bring more resources to your area.</p>
                     </div>`;
                 return;
             }
@@ -46,79 +61,40 @@ document.addEventListener('DOMContentLoaded', function() {
             let meals;
             try {
                 meals = JSON.parse(responseText);
-                console.log('Parsed meals data:', meals);
             } catch (parseError) {
-                console.error('JSON parse error:', parseError);
                 throw new Error(`Failed to parse server response: ${parseError.message}`);
             }
 
-            if (!Array.isArray(meals)) {
-                console.error('Non-array response:', meals);
-                meals = []; // Convert null or undefined to empty array
-            }
-
-            mealsList.innerHTML = '';
-
-            if (meals.length === 0) {
-                console.log('No meals found for location:', location);
+            if (!Array.isArray(meals) || meals.length === 0) {
                 mealsList.innerHTML = `
                     <div class="info-message">
+                        <i class="fas fa-utensils"></i>
                         <p>No meals are currently available in ${location}.</p>
-                        <p>Please check back later or try a different location.</p>
+                        <p>Check back soon or contact local support.</p>
                     </div>`;
                 return;
             }
 
-            console.log(`Found ${meals.length} meals for location:`, location);
+            const mealsHtml = meals.map(meal => {
+                const expiryDate = new Date(meal.expiryDate);
+                const daysUntilExpiry = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
 
-            const mealsHtml = meals.map((meal, index) => {
-                console.log(`Processing meal ${index}:`, meal);
-                
-                // Validate meal object
-                if (!meal || typeof meal !== 'object') {
-                    console.error(`Invalid meal at index ${index}:`, meal);
-                    return '';
-                }
-
-                // Check required fields
-                const requiredFields = ['id', 'type', 'quantity', 'location', 'expiryDate'];
-                const missingFields = requiredFields.filter(field => !meal[field]);
-                if (missingFields.length > 0) {
-                    console.error(`Meal at index ${index} is missing fields:`, missingFields);
-                    return '';
-                }
-
-                try {
-                    const expiryDate = new Date(meal.expiryDate);
-                    if (isNaN(expiryDate.getTime())) {
-                        console.error(`Invalid expiry date for meal ${index}:`, meal.expiryDate);
-                        return '';
-                    }
-
-                    return `
-                        <div class="card meal-card">
-                            <h3>${meal.type}</h3>
-                            <p><strong>Available:</strong> ${meal.quantity} servings</p>
-                            <p><strong>Location:</strong> ${meal.location}</p>
-                            <p><strong>Expires:</strong> ${expiryDate.toLocaleString()}</p>
-                            <button class="btn btn-primary request-meal" data-meal-id="${meal.id}">
-                                Request Meal
-                            </button>
-                        </div>`;
-                } catch (error) {
-                    console.error(`Error processing meal ${index}:`, error);
-                    return '';
-                }
-            }).filter(html => html !== '').join('');
-
-            if (!mealsHtml) {
-                mealsList.innerHTML = `
-                    <div class="info-message">
-                        <p>No valid meals found in ${location}.</p>
-                        <p>Please check back later or try a different location.</p>
+                return `
+                    <div class="card meal-card">
+                        <h3><i class="fas fa-drumstick-bite"></i> ${meal.type}</h3>
+                        <p><strong>Available:</strong> ${meal.quantity} servings</p>
+                        <p><strong>Location:</strong> ${meal.location}</p>
+                        <p><strong>Expires:</strong> 
+                            ${expiryDate.toLocaleString()} 
+                            <span class="${daysUntilExpiry <= 1 ? 'text-danger' : ''}">
+                                (${daysUntilExpiry} days left)
+                            </span>
+                        </p>
+                        <button class="btn btn-primary request-meal" data-meal-id="${meal.id}">
+                            <i class="fas fa-hand-holding-heart"></i> Request Meal
+                        </button>
                     </div>`;
-                return;
-            }
+            }).join('');
 
             mealsList.innerHTML = mealsHtml;
 
@@ -131,32 +107,52 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
         } catch (error) {
-            console.error('Error in fetchAvailableMeals:', error);
             mealsList.innerHTML = `
                 <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
                     <p>Unable to load meals at this time.</p>
                     <p>Error: ${error.message}</p>
-                    <p>Please check the console for more details.</p>
+                    <p>Please try again later or contact support.</p>
                 </div>`;
         }
     }
 
-    // Change location handler
-    document.getElementById('changeLocation').addEventListener('click', function() {
-        const newLocation = prompt('Enter new location:');
-        if (newLocation) {
-            receiverData.location = newLocation;
-            localStorage.setItem('receiverData', JSON.stringify(receiverData));
-            document.getElementById('receiverLocation').textContent = newLocation;
-            fetchAvailableMeals(newLocation);
-        }
-    });
+    // Simulate meal history and stats (would be replaced with actual backend data)
+    function updateMealStats() {
+        const mealsReceivedCount = document.getElementById('mealsReceivedCount');
+        const daysSupportedCount = document.getElementById('daysSupportedCount');
+        const mealHistory = document.getElementById('mealHistory');
 
-    // Initial meals fetch
+        // Mock data - replace with actual backend data
+        const mockMealsReceived = Math.floor(Math.random() * 10);
+        const mockDaysSupported = Math.floor(mockMealsReceived * 1.5);
+
+        mealsReceivedCount.textContent = mockMealsReceived;
+        daysSupportedCount.textContent = mockDaysSupported;
+
+        // Mock meal history
+        const mockMealHistory = [
+            { date: '2025-02-10', type: 'Vegetarian Pasta', location: 'Community Center' },
+            { date: '2025-02-05', type: 'Chicken Curry', location: 'Local Church' }
+        ];
+
+        if (mockMealHistory.length > 0) {
+            mealHistory.innerHTML = mockMealHistory.map(meal => `
+                <div class="meal-history-item">
+                    <i class="fas fa-utensils"></i>
+                    <span>${meal.date}: ${meal.type} from ${meal.location}</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    // Initial meals fetch and stats update
     fetchAvailableMeals(receiverData.location);
+    updateMealStats();
 
     // Auto-refresh meals every 5 minutes
     setInterval(() => {
         fetchAvailableMeals(receiverData.location);
+        updateMealStats();
     }, 5 * 60 * 1000);
 });
