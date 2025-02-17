@@ -3,7 +3,8 @@ package router
 import (
 	"encoding/json"
 	"net/http"
-
+	"os"
+	"path/filepath"
 	"github.com/SuccorTrail/SuccorTrail/internal/handler"
 	"github.com/SuccorTrail/SuccorTrail/internal/middleware"
 	"github.com/SuccorTrail/SuccorTrail/internal/repository"
@@ -18,8 +19,12 @@ func InitRouter() *mux.Router {
 	r.Use(middleware.LoggingMiddleware)
 	r.Use(middleware.RecoveryMiddleware)
 
+	// Get absolute path to the static directory
+	cwd, _ := os.Getwd()
+	staticPath := filepath.Join(cwd, "web/static")
+
 	// Serve static files
-	fs := http.FileServer(http.Dir("../../web/static"))
+	fs := http.FileServer(http.Dir(staticPath))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
 
 	// Initialize repositories
