@@ -2,18 +2,6 @@
 
 A blockchain-based solution to transform food aid distribution. SuccorTrail enhances transparency, efficiency, and accountability—ensuring that aid reaches those who need it most while combating corruption and waste.
 
-## Table of Contents
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Technology Stack](#technology-stack)
-- [Codebase Overview](#codebase-overview)
-- [Team](#team)
-- [Impact & Future Plans](#impact--future-plans)
-- [License](#license)
-
-## Overview
-SuccorTrail is a Web3-powered platform designed to fix broken food aid distribution systems. By leveraging blockchain technology, it creates an immutable record of resource flows—from donors to beneficiaries—building trust and ensuring accountability throughout the aid process.
-
 ## Key Features
 - **Transparency:** Immutable, verifiable records of every transaction.
 - **Combating Corruption:** Reduced opportunities for fraud by making all distributions traceable.
@@ -74,10 +62,10 @@ SuccorTrail is a Web3-powered platform designed to fix broken food aid distribut
   Includes Go modules and Git ignore settings.
 
 ## Team
-- **** Project Lead & Blockchain Architect  
-- [**harlid Hussein**]() 
-- [**Joseph Okumu:**]() 
-- [**Ouma Ouma:**]()
+- **Project Lead & Blockchain Architect**  
+- [**Kherld**](https://x.com/kh3rld) 
+- [**Joseph Okumu:**](https://github.com/JosephOkumu) 
+- [**Ouma Ouma:**](https://github.com/oumaoumag)
 
 ## Impact & Future Plans
 - **Scalability & Collaborations:**  
