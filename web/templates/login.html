@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SuccorTrail</title>
+    <link rel="stylesheet" href="/static/css/landing-styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <header class="main-header">
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">SuccorTrail</a>
+                <nav class="main-nav">
+                    <ul>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="/signup">Sign Up</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <section class="login-section" style="padding: 80px 0;">
+        <div class="container">
+            <div class="form-container">
+                <div class="form-title">
+                    <h2>Welcome Back</h2>
+                    <p>Log in to your SuccorTrail account</p>
+                </div>
+                
+                <div id="messageContainer"></div>
+                
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" class="form-input" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" class="form-input" placeholder="Enter your password" required>
+                    </div>
+                    <div class="form-group" style="text-align: right;">
+                        <a href="/forgot-password">Forgot Password?</a>
+                    </div>
+                    <button type="submit" class="btn btn-primary form-button">Log In</button>
+                </form>
+                
+                <div class="form-footer">
+                    <p>Don't have an account? <a href="/signup">Sign Up</a></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-about">
+                    <h3>SuccorTrail</h3>
+                    <p>Revolutionizing food aid distribution with blockchain technology to ensure transparency, efficiency, and accountability.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-section">
+                        <h4>Quick Links</h4>
+                        <ul>
+                            <li><a href="/">Home</a></li>
+                            <li><a href="/login">Login</a></li>
+                            <li><a href="/signup">Sign Up</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 SuccorTrail. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for verification success message
+            const urlParams = new URLSearchParams(window.location.search);
+            const verified = urlParams.get('verified');
+            
+            if (verified === 'true') {
+                showMessage('Your email has been verified successfully! You can now log in.', 'success');
+            }
+            
+            const loginForm = document.getElementById('loginForm');
+            
+            loginForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage('Login successful! Redirecting...', 'success');
+                        setTimeout(() => {
+                            window.location.href = data.redirectURL || '/';
+                        }, 1500);
+                    } else {
+                        showMessage(data.message || 'Invalid email or password', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('An error occurred. Please try again later.', 'error');
+                });
+            });
+            
+            function showMessage(message, type) {
+                const messageContainer = document.getElementById('messageContainer');
+                messageContainer.innerHTML = `<div class="message ${type}">${message}</div>`;
+                
+                // Auto-remove after 5 seconds for success messages
+                if (type === 'success') {
+                    setTimeout(() => {
+                        messageContainer.innerHTML = '';
+                    }, 5000);
+                }
+            }
+        });
+    </script>
+</body>
+</html> 
