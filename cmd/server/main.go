@@ -8,10 +8,16 @@ import (
 	"github.com/SuccorTrail/SuccorTrail/internal/db"
 	"github.com/SuccorTrail/SuccorTrail/internal/router"
 	"github.com/SuccorTrail/SuccorTrail/internal/util"
+	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 )
 
 func main() {
+	// Load environment variables first
+	if err := godotenv.Load(); err != nil {
+		logrus.Info("No .env file found, using system environment variables")
+	}
+
 	// Init logger
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logrus.SetOutput(os.Stdout)
