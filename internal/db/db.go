@@ -46,6 +46,14 @@ func InitDB() error {
         comments TEXT,
         created_at DATETIME,
         FOREIGN KEY(donation_id) REFERENCES donations(id)
+    );
+    CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        email TEXT UNIQUE,
+        password TEXT,
+        user_type TEXT,
+        created_at DATETIME
     );`
 	_, err = db.Exec(sqlStmt)
 	return err

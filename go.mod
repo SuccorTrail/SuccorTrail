@@ -37,4 +37,7 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-require golang.org/x/sys v0.29.0 // indirect
+require (
+	github.com/joho/godotenv v1.5.1 // indirect
+	golang.org/x/sys v0.29.0 // indirect
+)
